@@ -5,6 +5,7 @@ import com.univ.matchms.Models.Match;
 import com.univ.matchms.Services.MatchService;
 import io.swagger.annotations.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,11 +21,19 @@ public class MatchController {
     @Autowired
     private MatchService matchService;
 
+    @Autowired
+    Environment environment;
+
     @GetMapping("/{id}")
     @ApiOperation(value = "Get match by ID", notes = "Returns details of a football match based on ID")
     @HystrixCommand(fallbackMethod = "fallbackGetMatchById")
     public ResponseEntity<Match> getMatchById(@ApiParam(value = "Match ID", required = true) @PathVariable String id) {
         return ResponseEntity.ok(matchService.getMatchById(id).orElse(null));
+    }
+
+    @GetMapping("/test")
+    public String getPort () {
+        return environment.getProperty("default.server.port");
     }
 
     @GetMapping
