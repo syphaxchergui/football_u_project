@@ -1,11 +1,15 @@
 package com.univ.matchms.Controllers;
 
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.univ.matchms.Models.Match;
 import com.univ.matchms.Services.MatchService;
 import io.swagger.annotations.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -18,33 +22,64 @@ public class MatchController {
 
     @GetMapping("/{id}")
     @ApiOperation(value = "Get match by ID", notes = "Returns details of a football match based on ID")
-    public Match getMatchById(@ApiParam(value = "Match ID", required = true) @PathVariable String id) {
-        return matchService.getMatchById(id).orElse(null);
+    @HystrixCommand(fallbackMethod = "fallbackGetMatchById")
+    public ResponseEntity<Match> getMatchById(@ApiParam(value = "Match ID", required = true) @PathVariable String id) {
+        return ResponseEntity.ok(matchService.getMatchById(id).orElse(null));
     }
 
     @GetMapping
     @ApiOperation(value = "Get all matches", notes = "Returns a list of all football matches")
-    public List<Match> getAllMatches() {
-        return matchService.getAllMatches();
+    @HystrixCommand(fallbackMethod = "fallbackGetAllMatches")
+    public ResponseEntity<List<Match>> getAllMatches() {
+        List<Match> matches = matchService.getAllMatches();
+        return ResponseEntity.ok(matches);
     }
 
     @PostMapping
     @ApiOperation(value = "Add a new match", notes = "Creates a new football match")
-    public Match addMatch(@ApiParam(value = "Match details", required = true) @RequestBody Match match) {
-        return matchService.addMatch(match);
+    @HystrixCommand(fallbackMethod = "fallbackAddMatch")
+    public ResponseEntity<Match> addMatch(@ApiParam(value = "Match details", required = true) @RequestBody Match match) {
+        Match addedMatch = matchService.addMatch(match);
+        return ResponseEntity.ok(addedMatch);
     }
 
     @PutMapping("/{id}")
     @ApiOperation(value = "Update match", notes = "Updates details of an existing football match")
-    public Match updateMatch(
+    @HystrixCommand(fallbackMethod = "fallbackUpdateMatch")
+    public ResponseEntity<Match> updateMatch(
             @ApiParam(value = "Match ID", required = true) @PathVariable String id,
             @ApiParam(value = "Updated match details", required = true) @RequestBody Match updatedMatch) {
-        return matchService.updateMatch(id, updatedMatch);
+        Match updated = matchService.updateMatch(id, updatedMatch);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
     @ApiOperation(value = "Delete match", notes = "Deletes a football match based on ID")
-    public void deleteMatch(@ApiParam(value = "Match ID", required = true) @PathVariable String id) {
+    @HystrixCommand(fallbackMethod = "fallbackDeleteMatch")
+    public ResponseEntity<?> deleteMatch(@ApiParam(value = "Match ID", required = true) @PathVariable String id) {
         matchService.deleteMatch(id);
+        return ResponseEntity.ok().build();
+    }
+
+    // Fallback methods
+
+    private ResponseEntity<Match> fallbackGetMatchById(String id) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(null);
+    }
+
+    private ResponseEntity<List<Match>> fallbackGetAllMatches() {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Collections.emptyList());
+    }
+
+    private ResponseEntity<Match> fallbackAddMatch(Match match) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(null);
+    }
+
+    private ResponseEntity<Match> fallbackUpdateMatch(String id, Match updatedMatch) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(null);
+    }
+
+    private ResponseEntity<?> fallbackDeleteMatch(String id) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Service Unavailable");
     }
 }
